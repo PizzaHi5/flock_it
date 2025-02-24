@@ -1,3 +1,6 @@
+# AM Additions
+.python-version
+
 # Python
 __pycache__/
 *.py[cod]
