@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from decimal import Decimal
 import random
 import pandas as pd
@@ -35,6 +35,7 @@ class BaseStrategyAgent(AlphaSwarmAgent):
         self.strategy = strategy
         self.config = config
         self.portfolio = Portfolio.from_config(config)
+        self.threshold = 1.0  # Default threshold for signal generation
         
         # Initialize common tools
         tools = [
@@ -94,8 +95,6 @@ class BaseStrategyAgent(AlphaSwarmAgent):
 
     async def optimize_parameters(self) -> None:
         """Allow the agent to tune strategy parameters within safe bounds"""
-        # Example parameter optimization while keeping the core strategy logic
-            # Let the agent optimize thresholds within a safe range
         self.threshold = max(1.0, min(5.0, 
             await self._suggest_optimal_threshold()))
         
@@ -135,7 +134,6 @@ class BaseStrategyAgent(AlphaSwarmAgent):
                 )
                 volume_change = market_data.get('volume_change_24h', 0)
             except Exception:
-                # Handle case where Cookie metrics are unavailable
                 volume_change = 0
             
             # Calculate strategy-specific adjustment
@@ -145,7 +143,7 @@ class BaseStrategyAgent(AlphaSwarmAgent):
                 strategy_rules=self.strategy.rules
             )
             
-            # Apply risk management bounds based on strategy parameters
+            # Apply risk management bounds
             risk_bounds = self._apply_risk_bounds(
                 adjustment=strategy_adjustment,
                 stop_loss=self.strategy.stop_loss,
@@ -170,29 +168,76 @@ class BaseStrategyAgent(AlphaSwarmAgent):
         volume_change: float,
         strategy_rules: str
     ) -> float:
-        """Calculate strategy-specific threshold adjustment"""
-        base_adjustment = 1.0
+        """
+        Calculate strategy-specific threshold adjustment based on market conditions.
         
-        # Adjust based on volatility relative to strategy type
-        if "momentum" in strategy_rules.lower():
-            # More aggressive in high volatility for momentum
-            if volatility > 5.0:
-                base_adjustment *= 0.9  # More aggressive
-            elif volatility < 1.0:
-                base_adjustment *= 1.1  # More conservative
-        elif "reversion" in strategy_rules.lower():
-            # More conservative in high volatility for mean reversion
-            if volatility > 5.0:
-                base_adjustment *= 1.1  # More conservative
-            elif volatility < 1.0:
-                base_adjustment *= 0.9  # More aggressive
-                
-        # Consider volume changes if available
-        if abs(volume_change) > 50:
-            # High volume changes suggest need for adjustment
-            base_adjustment *= 1.05 if volume_change > 0 else 0.95
+        Args:
+            volatility: Price volatility as percentage
+            volume_change: Volume change percentage
+            strategy_rules: Strategy type and rules description
             
-        return base_adjustment
+        Returns:
+            float: Adjustment multiplier between 0.5 and 1.5
+        """
+        base_adjustment = 1.0
+        rules = strategy_rules.lower()
+        
+        # Momentum strategy adjustments
+        if "momentum" in rules:
+            if volatility > 5.0:
+                base_adjustment *= 0.9  # More aggressive in high volatility
+            elif volatility < 1.0:
+                base_adjustment *= 1.1  # More conservative in low volatility
+                
+        # Mean reversion strategy adjustments    
+        elif "reversion" in rules:
+            if volatility > 5.0:
+                base_adjustment *= 1.1  # More conservative in high volatility
+            elif volatility < 1.0:
+                base_adjustment *= 0.9  # More aggressive in low volatility
+                
+        # Breakout strategy adjustments
+        elif "breakout" in rules:
+            if volatility > 3.0:
+                base_adjustment *= 0.95  # More aggressive for clear breakouts
+            if abs(volume_change) > 100:
+                base_adjustment *= 0.9  # More aggressive on volume spikes
+                
+        # Swing trading adjustments
+        elif "swing" in rules:
+            if 2.0 <= volatility <= 4.0:
+                base_adjustment *= 0.95  # Sweet spot for swing trading
+            else:
+                base_adjustment *= 1.1  # More conservative outside range
+                
+        # Trend following adjustments
+        elif "trend" in rules:
+            if volatility < 2.0:
+                base_adjustment *= 1.1  # More conservative in low volatility
+            elif volume_change > 50:
+                base_adjustment *= 0.95  # More aggressive with trend confirmation
+                
+        # News event trading adjustments
+        elif "news" in rules:
+            if abs(volume_change) > 200:
+                base_adjustment *= 0.9  # More aggressive on major news
+            elif volatility > 5.0:
+                base_adjustment *= 0.95  # More aggressive in high impact events
+                
+        # Algorithmic trading adjustments
+        elif "algorithmic" in rules:
+            if 1.0 <= volatility <= 3.0:
+                base_adjustment *= 0.95  # Optimal algorithmic conditions
+            elif abs(volume_change) > 150:
+                base_adjustment *= 1.1  # More conservative on unusual volume
+        
+        # Volume-based adjustments for all strategies
+        if abs(volume_change) > 50:
+            volume_factor = 1.05 if volume_change > 0 else 0.95
+            base_adjustment *= volume_factor
+            
+        # Ensure adjustment stays within reasonable bounds
+        return max(0.5, min(1.5, base_adjustment))
 
     def _apply_risk_bounds(
         self,
