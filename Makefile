@@ -1,5 +1,11 @@
 # Define all phony targets
-.PHONY: help format lint dev-lint tests unit-tests all-tests docker-build docker-run run-price-forecaster
+.PHONY: help format lint dev-lint tests unit-tests all-tests docker-build docker-run run-price-forecaster docker-publish
+
+# Variables for Docker publishing
+AUTHOR=wfalcon0x
+AGENT_NAME=flock_it
+AGENT_PACKAGE_HASH=bafybeidtqhstenmsknzwgq4fpf4aabkfi5vhaqxma5nrbmqbv64rgpeyx4
+DOCKER_IMAGE=${AUTHOR}/oar-${AGENT_NAME}:${AGENT_PACKAGE_HASH}
 
 # Default git root path
 GIT_ROOT ?= $(shell git rev-parse --show-toplevel)
@@ -16,6 +22,7 @@ help:
 	@echo "  docker-build      - Build the Docker image"
 	@echo "  docker-run        - Run the Docker container"
 	@echo "  run-price-forecaster - Run the price forecaster agent"
+	@echo "  docker-publish    - Publish Docker image to DockerHub"
 
 # Code formatting and linting
 format:
@@ -53,7 +60,10 @@ run-price-forecaster:
 
 # Docker commands
 docker-build:
-	docker build -t alphaswarm-price-forecaster:latest .
+	docker build -t alphaswarm-price-forecaster:latest -t ${DOCKER_IMAGE} .
 
 docker-run:
 	docker run --env-file .env -it alphaswarm-price-forecaster:latest
+
+docker-publish:
+	docker push ${DOCKER_IMAGE}
