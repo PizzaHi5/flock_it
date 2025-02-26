@@ -24,7 +24,8 @@ class MomentumStrategyAgent(BaseStrategyAgent):
         conditions = []
         
         for token in self.strategy.tokens:
-            price_history = self.tools["GetAlchemyPriceHistoryBySymbol"].forward(
+            # Access tools using their class name as the key
+            price_history = self.tools.get("GetAlchemyPriceHistoryBySymbol").forward(
                 symbol=token,
                 chain=self.strategy.chain,
                 interval="5m",

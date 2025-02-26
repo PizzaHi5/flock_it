@@ -34,13 +34,13 @@ class NewsEventTradingAgent(BaseStrategyAgent):
         
         for token in self.strategy.tokens:
             # Get market metrics
-            metrics = self.tools["GetCookieMetricsBySymbol"].forward(
+            metrics = self.tools.get("GetCookieMetricsBySymbol").forward(
                 symbol=token,
                 interval="_3Days"
             )
             
             # Get price history
-            price_history = self.tools["GetAlchemyPriceHistoryBySymbol"].forward(
+            price_history = self.tools.get("GetAlchemyPriceHistoryBySymbol").forward(
                 symbol=token,
                 chain=self.strategy.chain,
                 interval="5m",
@@ -70,12 +70,12 @@ class NewsEventTradingAgent(BaseStrategyAgent):
         signals = []
         
         for token in self.strategy.tokens:
-            metrics = self.tools["GetCookieMetricsBySymbol"].forward(
+            metrics = self.tools.get("GetCookieMetricsBySymbol").forward(
                 symbol=token,
                 interval="_3Days"
             )
             
-            price_history = self.tools["GetAlchemyPriceHistoryBySymbol"].forward(
+            price_history = self.tools.get("GetAlchemyPriceHistoryBySymbol").forward(
                 symbol=token,
                 chain=self.strategy.chain,
                 interval="5m",
@@ -107,7 +107,7 @@ class NewsEventTradingAgent(BaseStrategyAgent):
         current_price = prices[-1]
         return (current_price - start_price) / start_price * 100
 
-    def _calculate_volume_surge(self, metrics: Any) -> float:
+    def _calculate_volume_surge(self, metrics: any) -> float:
         """Calculate volume surge multiple"""
         if not hasattr(metrics, 'volume_24_hours') or not metrics.volume_24_hours:
             return 1.0
@@ -117,7 +117,7 @@ class NewsEventTradingAgent(BaseStrategyAgent):
         
         return current_volume / avg_volume if avg_volume > 0 else 1.0
 
-    def _analyze_market_sentiment(self, metrics: Any) -> str:
+    def _analyze_market_sentiment(self, metrics: any) -> str:
         """Analyze market sentiment from social metrics"""
         if not metrics.average_engagements_count:
             return "Neutral"
@@ -139,7 +139,7 @@ class NewsEventTradingAgent(BaseStrategyAgent):
     def _detect_news_opportunity(
         self,
         prices: List[float],
-        metrics: Any
+        metrics: any
     ) -> Optional[Tuple[str, str, str]]:
         """
         Detect trading opportunities based on news impact

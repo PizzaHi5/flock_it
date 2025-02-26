@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Sequence
 from decimal import Decimal
 import random
 import pandas as pd
@@ -12,6 +12,7 @@ from alphaswarm.tools.exchanges import ExecuteTokenSwap, GetTokenPrice
 from alphaswarm.tools.alchemy import GetAlchemyPriceHistoryBySymbol
 from alphaswarm.services.portfolio import Portfolio
 from alphaswarm.tools.cookie.cookie_metrics import GetCookieMetricsBySymbol
+from alphaswarm.core.tool import AlphaSwarmToolBase
 
 @dataclass
 class TradingStrategy:
@@ -28,25 +29,70 @@ class TradingStrategy:
 class BaseStrategyAgent(AlphaSwarmAgent):
     def __init__(
         self,
-        strategy: TradingStrategy,
-        config: Config,
-        model_id: str = "anthropic/claude-3-5-sonnet-20241022"
+        strategy: Optional[TradingStrategy] = None,
+        config: Optional[Config] = None,
+        tools: Sequence[AlphaSwarmToolBase] = None,
+        model_id: str = "anthropic/claude-3-5-sonnet-20241022",
+        system_prompt: Optional[str] = None,
+        hints: Optional[str] = None,
     ) -> None:
-        self.strategy = strategy
+        """
+        Initialize the BaseStrategyAgent.
+
+        Args:
+            strategy: Trading strategy configuration.
+            config: Configuration object.
+            tools: A sequence of tools to use.
+            model_id: The LiteLLM model ID of the LLM to use.
+            system_prompt: System prompt defining the agent's expertise and role.
+            hints: Additional hints to guide the agent's decision making.
+        """
+        # Initialize strategy and config first
+        self.strategy = strategy or TradingStrategy(
+            name="",
+            description="",
+            rules="",
+            tokens=[],
+            chain="",
+            interval_minutes=5,
+            max_position_size=Decimal("0")
+        )
         self.config = config
-        self.portfolio = Portfolio.from_config(config)
+        self.portfolio = Portfolio.from_config(self.config) if config else None
         self.threshold = 1.0  # Default threshold for signal generation
         
         # Initialize common tools
-        tools = [
-            GetTokenAddress(config),
-            GetTokenPrice(config),
-            GetAlchemyPriceHistoryBySymbol(),
-            ExecuteTokenSwap(config),
-            GetCookieMetricsBySymbol()
-        ]
+        base_tools = []
+        if config:
+            base_tools.extend([
+                GetTokenAddress(config),
+                GetTokenPrice(config),
+                GetAlchemyPriceHistoryBySymbol(),
+                ExecuteTokenSwap(config),
+                GetCookieMetricsBySymbol()
+            ])
         
-        super().__init__(tools=tools, model_id=model_id)
+        # Combine base tools with provided tools
+        all_tools = base_tools + (list(tools) if tools else [])
+        
+        # Format system prompt to include required placeholders
+        formatted_system_prompt = (
+            "{{authorized_imports}}\n\n" +  # Required by smolagents
+            (system_prompt or (
+                "You are a trading expert. Analyze market conditions and "
+                "generate trading signals based on your strategy. "
+            )) +
+            "\n\n{{managed_agents_descriptions}}\n\n" +  # Required by smolagents
+            (hints or "Consider market conditions and risk management") +
+            "\n\n{{available_tools}}"  # Required by smolagents
+        )
+        
+        # Call parent class constructor with all parameters
+        super().__init__(
+            tools=all_tools,
+            model_id=model_id,
+            system_prompt=formatted_system_prompt
+        )
 
     async def get_portfolio_balance(self) -> str:
         """Get current portfolio balance information"""

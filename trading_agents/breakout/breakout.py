@@ -32,7 +32,7 @@ class BreakoutStrategyAgent(BaseStrategyAgent):
         conditions = []
         
         for token in self.strategy.tokens:
-            price_history = self.tools["GetAlchemyPriceHistoryBySymbol"].forward(
+            price_history = self.tools.get("GetAlchemyPriceHistoryBySymbol").forward(
                 symbol=token,
                 chain=self.strategy.chain,
                 interval="5m",
@@ -62,7 +62,7 @@ class BreakoutStrategyAgent(BaseStrategyAgent):
         signals = []
         
         for token in self.strategy.tokens:
-            price_history = self.tools["GetAlchemyPriceHistoryBySymbol"].forward(
+            price_history = self.tools.get("GetAlchemyPriceHistoryBySymbol").forward(
                 symbol=token,
                 chain=self.strategy.chain,
                 interval="5m",
