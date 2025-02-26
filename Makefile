@@ -1,5 +1,5 @@
 # Define all phony targets
-.PHONY: help format lint dev-lint tests unit-tests all-tests
+.PHONY: help format lint dev-lint tests unit-tests all-tests docker-build docker-run run-price-forecaster
 
 # Default git root path
 GIT_ROOT ?= $(shell git rev-parse --show-toplevel)
@@ -13,6 +13,9 @@ help:
 	@echo "  integration-tests - Run all integration tests"
 	@echo "  unit-tests        - Run all unit tests"
 	@echo "  all-tests         - Run all tests"
+	@echo "  docker-build      - Build the Docker image"
+	@echo "  docker-run        - Run the Docker container"
+	@echo "  run-price-forecaster - Run the price forecaster agent"
 
 # Code formatting and linting
 format:
@@ -43,3 +46,14 @@ all-tests: unit-tests integration-tests
 ci-all-tests:
 	poetry run pytest tests/unit tests/integration --cov=alphaswarm --cov-report=html:reports/coverage \
 		--html=reports/pytest-report.html --self-contained-html
+
+# Agents
+run-price-forecaster:
+	poetry run python examples/agents/price_forecaster.py
+
+# Docker commands
+docker-build:
+	docker build -t alphaswarm-price-forecaster:latest .
+
+docker-run:
+	docker run --env-file .env -it alphaswarm-price-forecaster:latest
