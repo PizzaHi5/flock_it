@@ -61,20 +61,25 @@ class BaseStrategyAgent(AlphaSwarmAgent):
         self.portfolio = Portfolio.from_config(self.config) if config else None
         self.threshold = 1.0  # Default threshold for signal generation
         
-        # Initialize common tools
+        # Initialize tools
         base_tools = []
         if config:
-            base_tools.extend([
+            base_tools: List[AlphaSwarmToolBase] = [
                 GetTokenAddress(config),
                 GetTokenPrice(config),
                 GetAlchemyPriceHistoryBySymbol(),
                 ExecuteTokenSwap(config),
                 GetCookieMetricsBySymbol()
-            ])
+            ]
         
-        # Combine base tools with provided tools
-        all_tools = base_tools + (list(tools) if tools else [])
-        self.tools = all_tools
+        # Combine base tools with provided tools if any
+        if tools:
+            if isinstance(tools, dict):
+                base_tools.extend(list(tools.values()))
+            else:
+                base_tools.extend(tools)
+                
+        self.tools = base_tools
         
         # Format system prompt to include required placeholders
         formatted_system_prompt = (
@@ -90,9 +95,10 @@ class BaseStrategyAgent(AlphaSwarmAgent):
         
         # Call parent class constructor with all parameters
         super().__init__(
-            tools=all_tools,
+            tools=self.tools,  # Convert back to list for parent class
             model_id=model_id,
-            system_prompt=formatted_system_prompt
+            system_prompt=formatted_system_prompt,
+            hints=hints or None
         )
 
     async def get_portfolio_balance(self) -> str:
@@ -156,18 +162,10 @@ class BaseStrategyAgent(AlphaSwarmAgent):
         adjustments = []
         
         for token in self.strategy.tokens:
-            # Get price history using existing tool - find tool by class name
-            price_history_tool = next(
-                (tool for tool in self.tools 
-                 if isinstance(tool, GetAlchemyPriceHistoryBySymbol)),
-                None
-            )
-            if not price_history_tool:
-                continue
-                
-            price_history = price_history_tool.forward(
+            # Get price history using existing tool
+            price_history_tool = self.tools["GetAlchemyPriceHistoryBySymbol"]
+            price_history = await price_history_tool(  # Direct call, not .forward()
                 symbol=token,
-                chain=self.strategy.chain,
                 interval="5m",
                 history=1  # 1 day of history
             )
@@ -183,19 +181,12 @@ class BaseStrategyAgent(AlphaSwarmAgent):
             
             # Get market metrics
             try:
-                cookie_metrics_tool = next(
-                    (tool for tool in self.tools 
-                     if isinstance(tool, GetCookieMetricsBySymbol)),
-                    None
+                cookie_metrics_tool = self.tools["GetCookieMetricsBySymbol"]
+                market_data = await cookie_metrics_tool(  # Direct call, not .forward()
+                    symbol=token,
+                    interval="_3Days"
                 )
-                if cookie_metrics_tool:
-                    market_data = cookie_metrics_tool.forward(
-                        symbol=token,
-                        interval="_3Days"
-                    )
-                    volume_change = market_data.get('volume_change_24h', 0)
-                else:
-                    volume_change = 0
+                volume_change = market_data.get('volume_change_24h', 0)
             except Exception:
                 volume_change = 0
             

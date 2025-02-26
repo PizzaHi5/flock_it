@@ -18,6 +18,7 @@ from alphaswarm.tools.cookie import (
     GetCookieMetricsPaged
 )
 from alphaswarm.tools.strategy_analysis import AnalyzeTradingStrategy, Strategy
+from alphaswarm.agent.agent import AlphaSwarmAgent
 
 from trading_agents.base.base_strategy import BaseStrategyAgent
 from trading_agents.agent_types import get_strategy_agents
@@ -30,164 +31,118 @@ class StrategyManager:
         # Initialize config
         self.config = Config(network_env="test")
         
-        # Initialize strategy analysis
-        self.strategy = Strategy(
-            rules="Multi-strategy trading system using momentum, mean reversion, breakout, and algorithmic signals",
+        # Initialize base agent
+        self.base_agent = AlphaSwarmAgent(
+            tools=[
+                GetTokenAddress(self.config),
+                GetTokenPrice(self.config),
+                ExecuteTokenSwap(self.config),
+            ],
             model_id="anthropic/claude-3-5-sonnet-20241022"
         )
         
-        # Initialize all available tools
-        self.tools = {
-            "GetUsdPrice": GetUsdPrice(),
-            "GetTokenAddress": GetTokenAddress(self.config),
-            "GetTokenPrice": GetTokenPrice(self.config),
-            "ExecuteTokenSwap": ExecuteTokenSwap(self.config),
-            "GetAlchemyPriceHistoryBySymbol": GetAlchemyPriceHistoryBySymbol(),
-            "GetAlchemyPriceHistoryByAddress": GetAlchemyPriceHistoryByAddress(),
-            "GetCookieMetricsBySymbol": GetCookieMetricsBySymbol(),
-            "GetCookieMetricsByContract": GetCookieMetricsByContract(),
-            "GetCookieMetricsByTwitter": GetCookieMetricsByTwitter(),
-            "GetCookieMetricsPaged": GetCookieMetricsPaged(),
-            "AnalyzeTradingStrategy": AnalyzeTradingStrategy(self.strategy)
-        }
-        
-        # Initialize each strategy with tools
-        self.strategies = []
-        for strategy in agent_strategies:
-            strategy_with_tools = strategy.__class__(
-                strategy=strategy.strategy,
-                config=self.config,
-                tools=list(self.tools.values()),  # Pass tools as a list
-                model_id="anthropic/claude-3-5-sonnet-20241022"
-            )
-            self.strategies.append(strategy_with_tools)
-            
-        self.active_strategies = self.strategies
-        self.strategy_signals = {}
-        
-        self.cron_clients: List[CronJobClient] = []
+        # Store strategies directly
+        self.strategies = agent_strategies
+        self.active_strategies = {}
+        self.strategy_responses = {}
 
-    def initialize_cron_clients(self):
-        """Initialize cron clients for active strategies"""
-        self.cron_clients = []
-        for strategy in self.active_strategies:
-            client = CronJobClient(
-                agent=strategy,
-                client_id=f"{strategy.strategy.name}_client",
-                interval_seconds=strategy.strategy.interval_minutes * 60,
-                message_generator=lambda s=strategy: s.get_trading_task(),
-                response_handler=lambda response, s=strategy: self._handle_strategy_response(response, s)
-            )
-            self.cron_clients.append(client)
-
-    def _handle_strategy_response(self, response: str, strategy: BaseStrategyAgent):
-        """Handle individual strategy responses"""
-        self.strategy_signals[strategy.strategy.name] = response
-        logger.info(f"Strategy Response from {strategy.strategy.name}: {response}")
-
-    async def evaluate_strategies(self, market_prompt: str) -> List[BaseStrategyAgent]:
-        """Use LLM to evaluate which strategies to activate based on market conditions"""
+    def initialize_agent(self, strategy: BaseStrategyAgent) -> BaseStrategyAgent:
+        """Initialize the given strategy agent."""
+        strategy.__init__(
+            config=self.config,
+            tools=[
+                GetTokenAddress(self.config),
+                GetTokenPrice(self.config),
+                ExecuteTokenSwap(self.config),
+            ],
+            model_id="anthropic/claude-3-5-sonnet-20241022"
         
-        strategy_analysis = self.tools["AnalyzeTradingStrategy"].forward(
-            token_data=market_prompt
         )
-        
-        # Parse strategy recommendations
-        selected_strategies = []
-        for strategy in self.strategies:
-            strategy_name = strategy.strategy.name.lower()
-            
-            # Check if strategy type is recommended
-            if any(strat_type in strategy_name for strat_type in 
-                  ["momentum" if "momentum" in strategy_analysis.recommended_strategies else "",
-                   "reversion" if "mean_reversion" in strategy_analysis.recommended_strategies else "",
-                   "breakout" if "breakout" in strategy_analysis.recommended_strategies else "",
-                   "algorithmic" if "algorithmic" in strategy_analysis.recommended_strategies else "",
-                   "news" if "news" in strategy_analysis.recommended_strategies else "",
-                   "swing" if "swing" in strategy_analysis.recommended_strategies else "",
-                   "trend" if "trend" in strategy_analysis.recommended_strategies else ""]):
-                selected_strategies.append(strategy)
-                
-        return selected_strategies
+        return strategy
 
-    async def process_strategy_signals(self):
-        """Process signals from active strategies and make trading decisions"""
-        combined_signals = []
+    async def process_strategy_response(self, strategy_name: str, response: str) -> List[str]:
+        """Process a strategy's response and determine if more strategies should be activated"""
         
-        for strategy in self.active_strategies:
-            signal = self.strategy_signals.get(strategy.strategy.name)
-            if signal:
-                combined_signals.append(
-                    f"=== {strategy.strategy.name} ===\n{signal}"
-                )
-                
-        if not combined_signals:
-            return
-            
-        # Analyze combined signals with LLM
         analysis_prompt = (
-            "=== Combined Strategy Signals ===\n" +
-            "\n\n".join(combined_signals) +
-            "\n\nAnalyze the above signals and recommend:\n"
-            "1. Which strategies to continue monitoring\n"
-            "2. Which strategies to deactivate\n"
-            "3. Whether to execute any trades\n"
-            "4. Risk management considerations"
+            f"=== Strategy Response ({strategy_name}) ===\n"
+            f"{response}\n\n"
+            "Available strategies: momentum, mean_reversion, breakout, algorithmic, news, swing, trend\n\n"
+            "Based on this response:\n"
+            "1. Should additional trading strategies be activated? If so, which ones?\n"
+            "2. What trading actions should be taken?\n"
+            "Respond in a structured format:\n"
+            "ACTIVATE: [comma-separated list of strategies to activate]\n"
+            "TRADE: [trade recommendations]\n"
         )
         
-        strategy_decision = self.tools["AnalyzeTradingStrategy"].forward(
-            token_data=analysis_prompt
-        )
+        strategy_decision = await self.base_agent.process_message(analysis_prompt)
         
-        # Update active strategies based on recommendations
-        self.active_strategies = await self.evaluate_strategies(strategy_decision.analysis)
+        # Parse strategies to activate
+        activate_line = next((line for line in strategy_decision.split('\n') 
+                            if line.startswith('ACTIVATE:')), '')
+        strategies_to_activate = [
+            s.strip() for s in activate_line.replace('ACTIVATE:', '').strip().split(',')
+            if s.strip() in self.strategies
+        ]
         
-        # Execute any recommended trades
-        trades = getattr(strategy_decision, 'trade_recommendations', None)
-        if trades:
-            await self._execute_trades(trades)
+        return strategies_to_activate
 
-    async def start(self, initial_market_prompt: str = ""):
-        """Start the strategy manager with an optional initial market analysis prompt."""
-        if not initial_market_prompt:
-            initial_market_prompt = await self._generate_default_market_analysis()
+    async def start(self, initial_message: str = "Analyze WETH/USDC trading opportunities"):
+        """Start the strategy manager with an initial message."""
+        try:
+            # Get initial response from base agent
+            response = await self.base_agent.process_message(initial_message)
+            strategies_to_activate = await self.process_strategy_response("base_agent", response)
             
-        # Initialize strategy signals
-        for strategy in self.active_strategies:
-            market_conditions = await strategy.analyze_market_conditions()
-            self.strategy_signals[strategy.strategy.name] = market_conditions
-            
-        # Process initial signals
-        await self.process_strategy_signals()
-        
-    async def _generate_default_market_analysis(self) -> str:
-        """Generate a default market analysis prompt."""
-        conditions = []
-        for strategy in self.active_strategies:
-            conditions.append(await strategy.analyze_market_conditions())
-        return "\n\n".join(conditions)
+            # Continuous feedback loop
+            while strategies_to_activate:
+                # Activate new strategies
+                for strategy_name in strategies_to_activate:
+                    if strategy_name not in self.active_strategies:
+                        strategy = self.strategies[strategy_name]
+                        agent = self.initialize_agent(strategy)
+                        self.active_strategies[strategy_name] = agent
+                        
+                        # Get strategy's analysis
+                        strategy_response = await agent.process_message(
+                            "Analyze current market conditions and generate trading signals"
+                        )
+                        self.strategy_responses[strategy_name] = strategy_response
+                        
+                        # Process response to determine if more strategies needed
+                        new_strategies = await self.process_strategy_response(
+                            strategy_name, 
+                            strategy_response
+                        )
+                        strategies_to_activate = [s for s in new_strategies 
+                                               if s not in self.active_strategies]
+                
+                if not strategies_to_activate:
+                    # Final analysis of all active strategies
+                    combined_analysis = (
+                        "=== Active Strategy Responses ===\n" +
+                        "\n\n".join(f"{name}:\n{response}" 
+                                  for name, response in self.strategy_responses.items())
+                    )
+                    await self.base_agent.process_message(combined_analysis)
+                    break
 
-    async def _execute_trades(self, trade_recommendations: List[dict]):
-        """Execute recommended trades"""
-        for trade in trade_recommendations:
-            try:
-                await self.tools["ExecuteTokenSwap"].forward(**trade)
-                logger.info(f"Executed trade: {trade}")
-            except Exception as e:
-                logger.error(f"Trade execution failed: {e}")
+        except Exception as e:
+            logger.error(f"Error in strategy manager: {e}")
+            raise
 
 async def main():
     config = Config(network_env="test")
     
-    # Create strategy agents
-    agents = get_strategy_agents(config)
+    # Get strategy agents
+    agents_strategies = get_strategy_agents(config)
 
     # Start the manager with initial analysis
-    manager = StrategyManager(agents)
+    manager = StrategyManager(agents_strategies)
     try:
-        await manager.start()
+        await manager.start("Analyze ETH/USDC trading opportunities on Ethereum Sepolia")
     except KeyboardInterrupt:
         logger.info("Shutting down strategy manager")
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())
