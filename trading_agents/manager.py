@@ -112,52 +112,58 @@ class StrategyManager:
             response = await self.base_agent.process_message(initial_message)
             strategies_to_activate = await self.process_strategy_response("base_agent", response)
             
-            print("Strategies to activate:\n",strategies_to_activate)
+            print("Strategies to activate:\n", strategies_to_activate)
 
-            # Continuous feedback loop
-            while strategies_to_activate:
-                # Activate new strategies
-                for strategy_name in strategies_to_activate:
-                    if strategy_name not in self.active_strategies:
-                        agent = self.strategies[strategy_name]
-                        self.active_strategies[strategy_name] = agent
-                        print("Made agent:\n",agent)
-                        
-                        # Build context-rich message including previous responses
-                        strategy_context = (
-                            f"=== Previous Analysis ===\n{response}\n\n"
-                            f"=== Strategy Configuration ===\n"
-                            f"Strategy: {agent.strategy.name}\n"
-                            f"Description: {agent.strategy.description}\n"
-                            f"Rules: {agent.strategy.rules}\n"
-                            f"Tokens: {agent.strategy.tokens}\n"
-                            f"Chain: {agent.strategy.chain}\n"
-                            f"Interval: {agent.strategy.interval_minutes} minutes\n"
-                            f"Max Position Size: {agent.strategy.max_position_size}\n"
-                            f"Stop Loss: {agent.strategy.stop_loss}\n"
-                            f"Take Profit: {agent.strategy.take_profit}\n\n"
-                            """
-                            Based on this context, analyze current market conditions 
-                            and generate trading signals specific to your strategy.
-                            You should respond with a list of trades to make, and the reasoning behind them.
-                            TRADE: [comma-separated list of trades to make] (Example: TRADE:SELL 1 WETH for USDC, BUY 0.02 USDC for WETH)
-                            REASON: [explanation for the trades and reasoning behind them]
-                            """
-                        )
-                        
-                        # Get strategy's analysis with full context
-                        strategy_response = await agent.process_message(strategy_context)
-                        self.strategy_responses[strategy_name] = strategy_response
-                
-                if not strategies_to_activate:
-                    # Final analysis of all active strategies
-                    combined_analysis = (
-                        "=== Active Strategy Responses ===\n" +
-                        "\n\n".join(f"{name}:\n{response}" 
-                                  for name, response in self.strategy_responses.items())
+            # Single pass activation of strategies
+            for strategy_name in strategies_to_activate:
+                if strategy_name not in self.active_strategies:
+                    agent = self.strategies[strategy_name]
+                    self.active_strategies[strategy_name] = agent
+                    print("Made agent:\n", agent)
+                    
+                    # Build context-rich message including previous responses
+                    strategy_context = (
+                        f"=== Previous Analysis ===\n{response}\n\n"
+                        f"=== Strategy Configuration ===\n"
+                        f"Strategy: {agent.strategy.name}\n"
+                        f"Description: {agent.strategy.description}\n"
+                        f"Rules: {agent.strategy.rules}\n"
+                        f"Tokens: {agent.strategy.tokens}\n"
+                        f"Chain: {agent.strategy.chain}\n"
+                        f"Interval: {agent.strategy.interval_minutes} minutes\n"
+                        f"Max Position Size: {agent.strategy.max_position_size}\n"
+                        f"Stop Loss: {agent.strategy.stop_loss}\n"
+                        f"Take Profit: {agent.strategy.take_profit}\n\n"
+                        """
+                        Based on this context, analyze current market conditions 
+                        and generate trading signals specific to your strategy.
+                        You should respond with a list of trades to make, and the reasoning behind them.
+                        TRADE: [comma-separated list of trades to make] (Example: TRADE:SELL 1 WETH for USDC, BUY 0.02 USDC for WETH)
+                        REASON: [explanation for the trades and reasoning behind them]
+                        """
                     )
-                    await self.base_agent.process_message(combined_analysis)
-                    break
+                    
+                    # Get strategy's analysis with full context
+                    strategy_response = await agent.process_message(strategy_context)
+                    self.strategy_responses[strategy_name] = strategy_response
+            
+            # Final analysis of all active strategies
+            combined_analysis = (
+                "=== Active Strategy Responses ===\n" +
+                "\n\n".join(f"{name}:\n{response}" 
+                            for name, response in self.strategy_responses.items())
+            )
+
+            summary_prompt = (
+                f"=== Summary of Active Strategies ===\n"
+                f"{combined_analysis}\n\n"
+                "Based on this summary, provide a concise overview of the current market conditions and trading opportunities."
+                "You should respond with a list of all trades to make from all strategies and the reasoning behind each trade."
+                "TRADE: [comma-separated list of trades to make] (Example: TRADE:SELL 1 WETH for USDC, BUY 0.02 USDC for WETH)"
+                "REASON: [explanation for the trades and reasoning behind them]"
+            )
+
+            await self.base_agent.process_message(summary_prompt)
 
         except Exception as e:
             logger.error(f"Error in strategy manager: {e}")
