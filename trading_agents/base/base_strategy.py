@@ -85,13 +85,17 @@ class BaseStrategyAgent(AlphaSwarmAgent):
         formatted_system_prompt = (
             "{{authorized_imports}}\n\n" +  # Required by smolagents
             (system_prompt or (
-                "You are a trading expert. Analyze market conditions and "
-                "generate trading signals based on your strategy. "
+                """
+                You are a trading expert. Analyze market conditions and 
+                generate trading signals based on your strategy. 
+                """
             )) +
             "\n\n{{managed_agents_descriptions}}\n\n" +  # Required by smolagents
             (hints or "Consider market conditions and risk management") +
             "\n\n{{available_tools}}"  # Required by smolagents
         )
+        self.system_prompt = formatted_system_prompt
+        self.hints = hints or None
         
         # Call parent class constructor with all parameters
         super().__init__(
