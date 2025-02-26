@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import List
+from typing import List, Dict
 
 from alphaswarm.config import Config
 from .base.base_strategy import TradingStrategy
@@ -11,7 +11,7 @@ from .news.news import NewsEventTradingAgent
 from .swing.swing import SwingTradingAgent
 from .trend.trend import TrendFollowingAgent
 
-def get_strategy_agents(config: Config) -> List:
+def get_strategy_agents(config: Config) -> Dict:
     # Define strategies 
     momentum_strategy = TradingStrategy(
         name="eth_momentum",
@@ -98,8 +98,8 @@ def get_strategy_agents(config: Config) -> List:
     )
 
     # Create strategy agents with their specific parameters
-    strategies = [
-        MomentumStrategyAgent(
+    strategies = {
+        "momentum": MomentumStrategyAgent(
             strategy=momentum_strategy,
             config=config,
             short_term_minutes=5,
@@ -113,7 +113,7 @@ def get_strategy_agents(config: Config) -> List:
             ),
             hints="Focus on short-term and long-term momentum comparisons"
         ),
-        MeanReversionStrategyAgent(
+        "mean_reversion": MeanReversionStrategyAgent(
             strategy=mean_rev_strategy,
             config=config,
             lookback_periods=20,
@@ -126,7 +126,7 @@ def get_strategy_agents(config: Config) -> List:
             ),
             hints="Use standard deviation bands to identify trading opportunities"
         ),
-        BreakoutStrategyAgent(
+        "breakout": BreakoutStrategyAgent(
             strategy=breakout_strategy,
             config=config,
             lookback_periods=20,
@@ -140,7 +140,7 @@ def get_strategy_agents(config: Config) -> List:
             ),
             hints="Look for volume confirmation on breakouts"
         ),
-        AlgorithmicTradingAgent(
+        "algorithmic": AlgorithmicTradingAgent(
             strategy=algorithmic_strategy,
             config=config,
             ma_periods=[10, 20, 50],
@@ -155,7 +155,7 @@ def get_strategy_agents(config: Config) -> List:
             ),
             hints="Weight different indicators based on market conditions"
         ),
-        NewsEventTradingAgent(
+        "news": NewsEventTradingAgent(
             strategy=news_strategy,
             config=config,
             price_impact_threshold=2.0,
@@ -169,7 +169,7 @@ def get_strategy_agents(config: Config) -> List:
             ),
             hints="Consider both sentiment and price/volume impact of news"
         ),
-        SwingTradingAgent(
+        "swing": SwingTradingAgent(
             strategy=swing_strategy,
             config=config,
             lookback_periods=20,
@@ -184,7 +184,7 @@ def get_strategy_agents(config: Config) -> List:
             ),
             hints="Use multiple timeframes to confirm swing opportunities"
         ),
-        TrendFollowingAgent(
+        "trend": TrendFollowingAgent(
             strategy=trend_strategy,
             config=config,
             short_ma_periods=20,
@@ -202,6 +202,6 @@ def get_strategy_agents(config: Config) -> List:
             ),
             hints="Combine trend indicators with momentum confirmation"
         )
-    ]
+    }
 
     return strategies

@@ -74,6 +74,7 @@ class BaseStrategyAgent(AlphaSwarmAgent):
         
         # Combine base tools with provided tools
         all_tools = base_tools + (list(tools) if tools else [])
+        self.tools = all_tools
         
         # Format system prompt to include required placeholders
         formatted_system_prompt = (
@@ -155,8 +156,16 @@ class BaseStrategyAgent(AlphaSwarmAgent):
         adjustments = []
         
         for token in self.strategy.tokens:
-            # Get price history using existing tool
-            price_history = self.tools["GetAlchemyPriceHistoryBySymbol"].forward(
+            # Get price history using existing tool - find tool by class name
+            price_history_tool = next(
+                (tool for tool in self.tools 
+                 if isinstance(tool, GetAlchemyPriceHistoryBySymbol)),
+                None
+            )
+            if not price_history_tool:
+                continue
+                
+            price_history = price_history_tool.forward(
                 symbol=token,
                 chain=self.strategy.chain,
                 interval="5m",
@@ -174,11 +183,19 @@ class BaseStrategyAgent(AlphaSwarmAgent):
             
             # Get market metrics
             try:
-                market_data = self.tools["GetCookieMetricsBySymbol"].forward(
-                    symbol=token,
-                    interval="_3Days"
+                cookie_metrics_tool = next(
+                    (tool for tool in self.tools 
+                     if isinstance(tool, GetCookieMetricsBySymbol)),
+                    None
                 )
-                volume_change = market_data.get('volume_change_24h', 0)
+                if cookie_metrics_tool:
+                    market_data = cookie_metrics_tool.forward(
+                        symbol=token,
+                        interval="_3Days"
+                    )
+                    volume_change = market_data.get('volume_change_24h', 0)
+                else:
+                    volume_change = 0
             except Exception:
                 volume_change = 0
             

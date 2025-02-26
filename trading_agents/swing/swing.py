@@ -63,7 +63,7 @@ class SwingTradingAgent(BaseStrategyAgent):
         signals = []
         
         for token in self.strategy.tokens:
-            price_history = self.tools.get("GetAlchemyPriceHistoryBySymbol").forward(
+            price_history = self.tools["GetAlchemyPriceHistoryBySymbol"].forward(
                 symbol=token,
                 chain=self.strategy.chain,
                 interval="5m",

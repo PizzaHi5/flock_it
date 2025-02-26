@@ -34,13 +34,13 @@ class NewsEventTradingAgent(BaseStrategyAgent):
         
         for token in self.strategy.tokens:
             # Get market metrics
-            metrics = self.tools.get("GetCookieMetricsBySymbol").forward(
+            metrics = self.tools["GetCookieMetricsBySymbol"].forward(
                 symbol=token,
                 interval="_3Days"
             )
             
             # Get price history
-            price_history = self.tools.get("GetAlchemyPriceHistoryBySymbol").forward(
+            price_history = self.tools["GetAlchemyPriceHistoryBySymbol"].forward(
                 symbol=token,
                 chain=self.strategy.chain,
                 interval="5m",
@@ -70,12 +70,12 @@ class NewsEventTradingAgent(BaseStrategyAgent):
         signals = []
         
         for token in self.strategy.tokens:
-            metrics = self.tools.get("GetCookieMetricsBySymbol").forward(
+            metrics = self.tools["GetCookieMetricsBySymbol"].forward(
                 symbol=token,
                 interval="_3Days"
             )
             
-            price_history = self.tools.get("GetAlchemyPriceHistoryBySymbol").forward(
+            price_history = self.tools["GetAlchemyPriceHistoryBySymbol"].forward(
                 symbol=token,
                 chain=self.strategy.chain,
                 interval="5m",

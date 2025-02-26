@@ -19,21 +19,14 @@ from alphaswarm.tools.cookie import (
 )
 from alphaswarm.tools.strategy_analysis import AnalyzeTradingStrategy, Strategy
 
-from .base.base_strategy import BaseStrategyAgent, TradingStrategy
-from .momentum.momentum import MomentumStrategyAgent
-from .mean_reversion.mean_reversion import MeanReversionStrategyAgent
-from .breakout.breakout import BreakoutStrategyAgent
-from .algorithmic.algorithmic import AlgorithmicTradingAgent
-from .news.news import NewsEventTradingAgent
-from .swing.swing import SwingTradingAgent
-from .trend.trend import TrendFollowingAgent
-from .agent_types import create_strategy_agents
+from trading_agents.base.base_strategy import BaseStrategyAgent
+from trading_agents.agent_types import get_strategy_agents
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class StrategyManager:
-    def __init__(self, agent_strategies: List[BaseStrategyAgent]):
+    def __init__(self, agent_strategies: Dict[str, BaseStrategyAgent]):
         # Initialize config
         self.config = Config(network_env="test")
         
@@ -187,10 +180,10 @@ async def main():
     config = Config(network_env="test")
     
     # Create strategy agents
-    strategies = create_strategy_agents(config)
+    agents = get_strategy_agents(config)
 
     # Start the manager with initial analysis
-    manager = StrategyManager(strategies)
+    manager = StrategyManager(agents)
     try:
         await manager.start()
     except KeyboardInterrupt:
