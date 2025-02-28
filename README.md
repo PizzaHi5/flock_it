@@ -21,6 +21,42 @@ Flock It is a multi-agent trading system that uses LLM-powered agents to analyze
 
 💡 Intelligent parameter optimization and risk management
 
+**Design Flowchart**
+```mermaid
+flowchart TB
+    subgraph Strategy Manager
+        BA[Base Agent<br>Claude 3.5 Sonnet] --> SM[Strategy Manager]
+        SM --> |Activates| AS[Active Strategies]
+    end
+    
+    subgraph Trading Strategies
+        MO[Momentum<br>Trading] --> AS
+        MR[Mean<br>Reversion] --> AS
+        BR[Breakout<br>Detection] --> AS
+        AL[Algorithmic<br>Trading] --> AS
+        NE[News Event<br>Trading] --> AS
+        SW[Swing<br>Trading] --> AS
+        TR[Trend<br>Following] --> AS
+    end
+    
+    subgraph Market Analysis
+        AS --> |Analyzes| MC[Market<br>Conditions]
+        MC --> |Generates| TS[Trading<br>Signals]
+        TS --> |Feeds back to| SM
+    end
+    
+    subgraph Execution
+        SM --> |Coordinates| TD[Trade<br>Decisions]
+        TD --> |Executes| TR1[Trades on<br>Uniswap V2/V3]
+    end
+    
+    subgraph Tools & Data
+        API[Alchemy API] --> MC
+        NWS[News Data] --> MC
+        TA[Technical<br>Analysis] --> MC
+    end
+```  
+
 ### Strategy Implementations
 
 Base Agent: Coordinates strategy selection and manages overall trading decisions
