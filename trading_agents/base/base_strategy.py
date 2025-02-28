@@ -4,6 +4,7 @@ from decimal import Decimal
 import random
 import pandas as pd
 import numpy as np
+import logging
 
 from alphaswarm.agent.agent import AlphaSwarmAgent
 from alphaswarm.config import Config
@@ -13,6 +14,13 @@ from alphaswarm.tools.alchemy import GetAlchemyPriceHistoryBySymbol
 from alphaswarm.services.portfolio import Portfolio
 from alphaswarm.tools.cookie.cookie_metrics import GetCookieMetricsBySymbol
 from alphaswarm.core.tool import AlphaSwarmToolBase
+from trading_agents.tools.base_tools import (
+    AnalyzeMarketConditions,
+    GenerateTradingSignals,
+    OptimizeParameters
+)
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class TradingStrategy:
@@ -69,9 +77,12 @@ class BaseStrategyAgent(AlphaSwarmAgent):
                 GetTokenPrice(config),
                 GetAlchemyPriceHistoryBySymbol(),
                 ExecuteTokenSwap(config),
-                GetCookieMetricsBySymbol()
+                GetCookieMetricsBySymbol(),
+                AnalyzeMarketConditions(self),
+                GenerateTradingSignals(self),
+                OptimizeParameters(self)
             ]
-        
+
         # Combine base tools with provided tools if any
         if tools:
             if isinstance(tools, dict):
@@ -99,7 +110,7 @@ class BaseStrategyAgent(AlphaSwarmAgent):
         
         # Call parent class constructor with all parameters
         super().__init__(
-            tools=self.tools,  # Convert back to list for parent class
+            tools=base_tools,  # Convert back to list for parent class
             model_id=model_id,
             system_prompt=formatted_system_prompt,
             hints=hints or None

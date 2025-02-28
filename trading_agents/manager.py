@@ -7,16 +7,6 @@ from alphaswarm.agent.clients import CronJobClient
 from alphaswarm.config import Config
 from alphaswarm.tools.core import GetUsdPrice, GetTokenAddress
 from alphaswarm.tools.exchanges import GetTokenPrice, ExecuteTokenSwap
-from alphaswarm.tools.alchemy import (
-    GetAlchemyPriceHistoryBySymbol,
-    GetAlchemyPriceHistoryByAddress
-)
-from alphaswarm.tools.cookie import (
-    GetCookieMetricsBySymbol,
-    GetCookieMetricsByContract,
-    GetCookieMetricsByTwitter,
-    GetCookieMetricsPaged
-)
 from alphaswarm.tools.strategy_analysis import AnalyzeTradingStrategy, Strategy
 from alphaswarm.agent.agent import AlphaSwarmAgent
 
@@ -93,7 +83,7 @@ class StrategyManager:
             "1. Should additional trading strategies be activated? If so, which ones?\n"
             "2. What trading actions should be taken?\n"
             "Respond in a structured format:\n"
-            "ACTIVATE: [comma-separated list of strategies to activate] (Example: ACTIVATE:momentum,mean_reversion,trend)\n"
+            "ACTIVATE: [comma-separated list of strategies to activate] (Example: ACTIVATE:momentum,mean_reversion,trend) (If there are none to activate, leave it empty)\n"
             "TRADE: [trade recommendations]\n"
             "REASON: [explanation for the activation of the strategies and trade recommendations]\n"
         )
@@ -137,9 +127,11 @@ class StrategyManager:
                         """
                         Based on this context, analyze current market conditions 
                         and generate trading signals specific to your strategy.
-                        You should respond with a list of trades to make, and the reasoning behind them.
+                        You will respond with a list of trades to make, and the reasoning behind them.
                         TRADE: [comma-separated list of trades to make] (Example: TRADE:SELL 1 WETH for USDC, BUY 0.02 USDC for WETH)
                         REASON: [explanation for the trades and reasoning behind them]
+
+                        You tend to use tools available to you such as AnalyzeMarketConditions, GenerateTradingSignals, and OptimizeParameters.
                         """
                     )
                     
@@ -184,6 +176,18 @@ def extract_strategies(text: str) -> list[str]:
         >>> extract_strategies(text)
         ['momentum', 'mean_reversion', 'trend']
     """
+
+     # Try dictionary format first
+    if "{'ACTIVATE':" in text:
+        import ast
+        try:
+            # Parse the dictionary string
+            response_dict = ast.literal_eval(text.split("Out - Final answer: ")[1].strip())
+            strategies = response_dict.get('ACTIVATE', '').split(',')
+            return [s.strip() for s in strategies if s.strip()]
+        except:
+            pass
+
     # Find the line containing ACTIVATE:
     for line in text.split('\n'):
         if line.upper().startswith('ACTIVATE:'):
