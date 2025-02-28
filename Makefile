@@ -41,6 +41,9 @@ lint:
 	poetry run ruff check .
 #	poetry pylint alphaswarm/. --max-line-length 120 --disable=R,C,I,E0401,W1203,W0107 --fail-under=9
 
+run-agents:
+	poetry run python trading_agents/manager.py
+
 # Testing
 integration-tests:
 	poetry run pytest tests/integration

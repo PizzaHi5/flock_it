@@ -40,7 +40,7 @@ class CronJobClient(AlphaSwarmAgentClient[Any]):
 
     async def get_message(self) -> Context:
         await asyncio.sleep(self.interval_seconds)
-        message = self.message_generator()
+        message = await self.message_generator()
 
         # If message should not be processed, handle it and return a quit signal
         if not self.should_process(message):
