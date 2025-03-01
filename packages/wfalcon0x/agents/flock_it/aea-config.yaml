@@ -1,0 +1,31 @@
+agent_name: flock_it
+author: wfalcon0x
+version: 0.1.0
+license: MIT License
+description: A network of self-repaying loan agents - the agents autonomously pay
+  back a user's loan using strategies based on the user's risk tolerance
+aea_version: '>=1.0.0, <2.0.0'
+fingerprint:
+  README.md: bafybeida7kayw4iuc4vxqxnjyononicx4fuuseqyu3koxsb7o2hwbtnojy
+  __init__.py: bafybeia4ix5kiswzdgvhwglybziafnkid6njzkdm7pmpazzxlncsyndptm
+fingerprint_ignore_patterns: []
+connections: []
+contracts: []
+protocols: []
+skills: []
+customs: []
+default_ledger: ethereum
+required_ledgers:
+- ethereum
+default_routing: {}
+connection_private_key_paths: {}
+private_key_paths: {}
+logging_config:
+  disable_existing_loggers: false
+  version: 1
+dependencies:
+  open-aea-ledger-cosmos:
+    version: ==1.63.0
+  open-aea-ledger-ethereum:
+    version: ==1.63.0
+default_connection: null
