@@ -94,3 +94,16 @@ py_version = 311
 src_paths = ["src"]
 skip = ["__init__.py"]
 skip_glob = ["**/.venv/*", "**/venv/*", "**/docs/*", "**/stubs/*", "**/tests/*"]
+
+[tool.poetry.group.autonomy]
+optional = true
+
+[tool.poetry.group.autonomy.dependencies]
+open-aea = { version = "1.53.0", extras = ["all"] }
+open-aea-cli-ipfs = "1.53.0"
+open-aea-cosmpy = "0.6.7"
+open-aea-ledger-cosmos = "1.53.0"
+open-aea-ledger-ethereum = "1.53.0"
+open-aea-ledger-ethereum-hwi = "1.53.0"
+open-aea-test-autonomy = "0.15.0"
+open-autonomy = { version = "0.15.0", extras = ["all"] }
