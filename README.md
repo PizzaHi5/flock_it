@@ -26,7 +26,10 @@ Flock It is a multi-agent trading system that uses LLM-powered agents to analyze
 flowchart TB
     subgraph Strategy Manager
         BA[Base Agent<br>Claude 3.5 Sonnet] --> SM[Strategy Manager]
-        SM --> |Activates| AS[Active Strategies]
+        SM --> |Highlights| NB[News]
+        SM --> |Highlights| TAB[Market Sentiment]
+        SM --> |Price Data| AAB[Alchemy API]
+        NB & TAB & AAB --> AS[Active Strategies]
     end
     
     subgraph Trading Strategies
