@@ -63,10 +63,10 @@ run-price-forecaster:
 
 # Docker commands
 docker-build:
-	docker build -t alphaswarm-price-forecaster:latest -t ${DOCKER_IMAGE} .
+	docker build -t flock_it:latest -t ${DOCKER_IMAGE} .
 
 docker-run:
-	docker run --env-file .env -it alphaswarm-price-forecaster:latest
+	docker run --env-file .env -it flock_it:latest
 
 docker-publish:
 	docker push ${DOCKER_IMAGE}

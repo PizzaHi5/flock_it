@@ -14,8 +14,9 @@ WORKDIR /
 # Copy only what we need first to leverage caching
 COPY pyproject.toml poetry.lock Makefile ./
 
-# Copy the entire project
+# Copy the entire project with correct directory structure
 COPY alphaswarm/ ./alphaswarm/
+COPY trading_agents/ ./trading_agents/
 COPY examples/ ./examples/
 COPY tests/ ./tests/
 COPY config/ ./config/
@@ -29,7 +30,7 @@ RUN curl -sSL 'https://install.python-poetry.org' | python3 - \
 RUN pip install web3 hexbytes
 
 # Set entrypoint to run the price forecaster
-ENTRYPOINT ["make", "run-price-forecaster"]
+ENTRYPOINT ["make", "run-agents"]
 
 # Add simple healthcheck
 HEALTHCHECK --interval=5s --timeout=30s --retries=3 CMD python -c "import sys; sys.exit(0)"
