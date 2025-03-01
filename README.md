@@ -155,3 +155,8 @@ To start the trading agents:
 make run-agents
 ```
 For additional information or if you encounter any issues, please refer to the base [README](https://github.com/chain-ml/alphaswarm?tab=readme-ov-file)
+
+### Demo
+
+https://github.com/user-attachments/assets/09e7f146-252d-4169-a9e2-f8df7921273f
+
