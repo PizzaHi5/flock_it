@@ -1,5 +1,11 @@
 # Define all phony targets
-.PHONY: help format lint dev-lint tests unit-tests all-tests
+.PHONY: help format lint dev-lint tests unit-tests all-tests docker-build docker-run run-price-forecaster docker-publish
+
+# Variables for Docker publishing
+AUTHOR=wfalcon0x
+AGENT_NAME=flock_it
+AGENT_PACKAGE_HASH=bafybeidtqhstenmsknzwgq4fpf4aabkfi5vhaqxma5nrbmqbv64rgpeyx4
+DOCKER_IMAGE=${AUTHOR}/oar-${AGENT_NAME}:${AGENT_PACKAGE_HASH}
 
 # Default git root path
 GIT_ROOT ?= $(shell git rev-parse --show-toplevel)
@@ -13,6 +19,10 @@ help:
 	@echo "  integration-tests - Run all integration tests"
 	@echo "  unit-tests        - Run all unit tests"
 	@echo "  all-tests         - Run all tests"
+	@echo "  docker-build      - Build the Docker image"
+	@echo "  docker-run        - Run the Docker container"
+	@echo "  run-price-forecaster - Run the price forecaster agent"
+	@echo "  docker-publish    - Publish Docker image to DockerHub"
 
 # Code formatting and linting
 format:
@@ -46,3 +56,17 @@ all-tests: unit-tests integration-tests
 ci-all-tests:
 	poetry run pytest tests/unit tests/integration --cov=alphaswarm --cov-report=html:reports/coverage \
 		--html=reports/pytest-report.html --self-contained-html
+
+# Agents
+run-price-forecaster:
+	poetry run python examples/agents/price_forecaster.py
+
+# Docker commands
+docker-build:
+	docker build -t flock_it:latest -t ${DOCKER_IMAGE} .
+
+docker-run:
+	docker run --env-file .env -it flock_it:latest
+
+docker-publish:
+	docker push ${DOCKER_IMAGE}
