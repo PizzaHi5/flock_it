@@ -31,9 +31,9 @@ flowchart TB
         SM --> |Price Data| AAB[Alchemy API]
         NB & TAB & AAB --> AS[Active Strategies]
     end
-    
+
     subgraph Trading Strategies
-        AS --> |May Activate| MO[Momentum<br>Trading] 
+        AS --> |May Activate| MO[Momentum<br>Trading]
         AS --> |May Activate| MR[Mean<br>Reversion]
         AS --> |May Activate| BR[Breakout<br>Detection]
         AS --> |May Activate| AL[Algorithmic<br>Trading]
@@ -57,13 +57,13 @@ flowchart TB
         SW --> |Uses| API & NWS & TA
         TR --> |Uses| API & NWS & TA
     end
-    
+
     subgraph Signal Aggregation
         MO & MR & BR & AL & NE & SW & TR --> |Feed Analysis| MC[Market<br>Conditions]
         MC --> |Generates| TS[Trading<br>Signals]
         TS --> |Feeds back to| SM
     end
-    
+
     subgraph Execution
         SM --> |Coordinates| TD[Trade<br>Decisions]
         TD --> |Executes| TR1[Trades on<br>Uniswap V2/V3]
@@ -151,7 +151,7 @@ LOG_FORMAT=%(asctime)s - %(name)s:%(lineno)d - %(funcName)s - %(levelname)s - %(
 
 ### Running the Bot
 To start the trading agents:
-```   
+```
 make run-agents
 ```
 For additional information or if you encounter any issues, please refer to the base [README](https://github.com/chain-ml/alphaswarm?tab=readme-ov-file)
@@ -159,4 +159,8 @@ For additional information or if you encounter any issues, please refer to the b
 ### Demo
 
 https://github.com/user-attachments/assets/09e7f146-252d-4169-a9e2-f8df7921273f
+
+## OLAS
+
+Agent is minted and can be found in the OLAS registry here: https://registry.olas.network/ethereum/agents/58
 
